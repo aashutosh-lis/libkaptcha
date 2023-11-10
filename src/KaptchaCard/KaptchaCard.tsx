@@ -18,7 +18,7 @@ export function KaptchaCard({url}:KaptchaCardProps) {
 
   const [timer, setTimer] = useState<number>(0); // 3 minutes in seconds
   const [ans , setAns] = useState<string>("");
-  const [validationMsg, setValidationMsg] = useState<string>("")
+  const [validationStatus, setValidationStatus] = useState<Boolean | null>(null)
 
   useEffect(() => {
 
@@ -86,11 +86,11 @@ export function KaptchaCard({url}:KaptchaCardProps) {
         const result = await res.json();
 
         if (result['is_human'] === true) {
-          setValidationMsg("Successful in Validation");
+          setValidationStatus(true);
           setTimer(0);
 
         } else {
-          setValidationMsg("Please try again");
+          setValidationStatus(false);
           fetchCaptcha();
         }
 
@@ -120,7 +120,18 @@ export function KaptchaCard({url}:KaptchaCardProps) {
   return (
     <div className = "captcha-container" >
     <div className ="left">
-        <span>{validationMsg}</span>
+
+    {
+          validationStatus !== null ? (
+            validationStatus ? (
+              <span id="correct">Validation Successful</span>
+            ) : (
+              <span id="incorrect">Please Try Again</span>
+            )
+          ) : (
+            <span></span>
+          )
+        }
         <img src = {captchaData.image} alt="Captcha Image"/>
     </div>
     <div className = "right">

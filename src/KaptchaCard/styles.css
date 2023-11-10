@@ -68,6 +68,17 @@
     padding:8px;
 }
 
+#correct{
+    color:green;
+    font-weight: bold;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+}
+
+#incorrect{
+    color:red;
+    font-weight: bold;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+}
 
 
 
