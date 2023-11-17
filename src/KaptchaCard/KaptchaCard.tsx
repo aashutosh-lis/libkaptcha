@@ -1,151 +1,194 @@
-import React, { useEffect, useRef, useState } from 'react'
-import ReplayIcon from '@mui/icons-material/Replay';
+import React, { useState, useEffect } from "react";
+import OtpInput from "react-otp-input";
+import {RotateCcw } from "lucide-react";
 import './styles.css'
 
-export interface KaptchaCardProps {
-  url:String,
+export interface urlProps{
+    url:string;
 }
 
-// { title }: KaptchaCardProps
-export function KaptchaCard({url}:KaptchaCardProps) {
-
-  const [captchaData, setCaptchaData] = useState({
-    image_id: '',
-    image: '',
-    expiry_time: 0,
-  });
- 
-
-  const [timer, setTimer] = useState<number>(0); // 3 minutes in seconds
-  const [ans , setAns] = useState<string>("");
-  const [validationStatus, setValidationStatus] = useState<Boolean | null>(null)
-
-  useEffect(() => {
-
-    const countdown = setInterval(() => {
-      if (timer > 0) {
-        setTimer(timer - 1);
-      } else {
-        clearInterval(countdown);
-        // Handle timer expiration 
-      }
-    }, 1000);
-
-// Cleanup the interval when the component unmounts
-    return () => clearInterval(countdown);
-  }, [timer]);
-
-  // Convert the remaining seconds to the "mm:ss" format
-  const minutes: number = Math.floor(timer / 60);
-  const seconds: number = timer % 60;
-  const formattedTime: string = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-
-
-
-  const fetchCaptcha = async () => {
-    try {
-      const response = await fetch(url+'/get-captcha', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      console.log('POST request successful', data);
-      setCaptchaData((prevData) => ({
-        ...prevData,
-        ...data,
-      }));
-      console.log("state var",captchaData);
-      
-
-    } catch (error) {
-      console.error('POST request error', error);
-    }
-  };
-
-
-  //Verify by sending ans and uuid to is-human route.
-  const verify = async() => {
-    try{
-        const res = await fetch(url+'/is-human',{
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-           },
-          body: JSON.stringify({
-            uuid:captchaData.image_id,
-            answer:ans
-          }),
-        })
-
-        const result = await res.json();
-
-        if (result['is_human'] === true) {
-          setValidationStatus(true);
-          setTimer(0);
-
-        } else {
-          setValidationStatus(false);
-          fetchCaptcha();
-        }
-
-        setAns("");
-    }
-
-    catch(error){
-      console.log("Error in verify  /is-human route.",error);
-    }
-  }
-
-
-  useEffect(()=>{
-    fetchCaptcha();
-  },[])
+export function KaptchaCard({url}:urlProps){
     
-  useEffect(() => {
-    if (captchaData.expiry_time) {
-      const timestamp = Math.floor(captchaData.expiry_time);
-      const currTime = Math.floor(Date.now());
-      const expTime = Math.floor((timestamp - currTime) / 1000);
-      setTimer(expTime);
-    }
-  }, [captchaData]);
+    const [verificationResult, setVerificationResult] = useState<Boolean | null>(null);
+    const [captchaAnswer, setCaptchaAnswer] = useState<string>("");
+    const [disableButton, setdisableButton] = useState<boolean>(false);
 
-
-  return (
-    <div className = "captcha-container" >
-    <div className ="left">
-
-    {
-          validationStatus !== null ? (
-            validationStatus ? (
-              <span id="correct">Validation Successful</span>
-            ) : (
-              <span id="incorrect">Please Try Again</span>
-            )
-          ) : (
-            <span></span>
-          )
+    const [captchaData, setCaptchaData] = useState({
+        image_id: "",
+        image: "",
+        expiry_time: 0,
+      });
+      
+      const fetchCaptcha = async () => {
+        try {
+          const response = await fetch(url+"/get-captcha", {
+            method: "POST",
+          });
+    
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+    
+          const data = await response.json();
+          console.log("POST request successful", data);
+          setCaptchaData(data);
+        } catch (error) {
+          console.error("POST request error", error);
         }
-        <img src = {captchaData.image} alt="Captcha Image"/>
-    </div>
-    <div className = "right">
-        <div className="input-timer"> 
-            <input type="text" placeholder="Captcha" value={ans} className='captcha-input' onChange={(e)=>{setAns(e.target.value)}}/>
-            <div className="timer">{formattedTime}</div>
+      };
+
+      const refreshCaptcha = () => {
+        setdisableButton(false);
+        setCaptchaAnswer("");
+        fetchCaptcha();
+      };
+
+      const refreshCaptchaWithMessageClear=()=>{
+        setVerificationResult(null);
+        refreshCaptcha();
+      }
+
+
+      const verifyCaptcha = async () => {
+        try {
+          const response = await fetch(url+"/is-human", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              answer: captchaAnswer,
+              uuid: captchaData.image_id,
+            }),
+          });
+    
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+    
+          const data = await response.json();
+          console.log("Verification successful", data);
+          setCaptchaAnswer("");
+          if (data.is_human == true) {
+            setVerificationResult(true);
+            setdisableButton(true);
+            console.log("is human");
+          } else {
+            setVerificationResult(false);
+            console.log("is not human");
+            refreshCaptcha();
+          }
+        } catch (error) {
+          console.error("Verification error", error);
+          setVerificationResult(null);
+        }
+      };
+      const handleOtpChange = (value: string) => {
+        setCaptchaAnswer(value);
+      };
+    
+      useEffect(() => {
+        // Call the fetchCaptcha function when the component mounts
+        fetchCaptcha();
+      }, []);
+    
+      // Timer functionalities
+      const [timer, setTimer] = useState<number>(0); // 3 minutes in seconds
+      useEffect(() => {
+        const countdown = setInterval(() => {
+          if (timer > 0) {
+            setTimer(timer - 1);
+          } else {
+            refreshCaptcha();
+            clearInterval(countdown);
+            setVerificationResult(null);
+            // Handle timer expiration
+          }
+        }, 1000);
+    
+        // Cleanup the interval when the component unmounts
+        return () => clearInterval(countdown);
+      }, [timer]);
+    
+      const minutes: string = Math.floor(timer / 60).toString().padStart(2,'0');
+      const seconds: number = timer % 60;
+      const formattedTime: string = `${minutes}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
+    
+      useEffect(() => {
+        if (captchaData.expiry_time) {
+          const timestamp = Math.floor(captchaData.expiry_time);
+          const currTime = Math.floor(Date.now());
+          const expTime = Math.floor((timestamp - currTime) / 1000);
+          setTimer(expTime);
+        }
+      }, [captchaData]);
+    
+      return (
+        <div className="captchacomp">
+          <div className="child captchasec">
+            <img
+              className="captchaimg_refreshbutton captchaimage"
+              src={captchaData.image}
+              alt="captcha-image"
+            />
+            <button 
+              disabled={disableButton}
+              className={`captchaimg_refreshbutton refreshbutton ${disableButton?'disabled':''}`}
+              onClick={refreshCaptchaWithMessageClear}>
+              <RotateCcw />
+            </button>
+          </div>
+          <div className="child messagenote">
+            <p>
+              {verificationResult !== null ? (
+                verificationResult ? (
+                  <span id="correct">Validation Successful</span>
+                ) : (
+                  <span id="incorrect">Validation Error</span>
+                )
+              ) : (
+                <div id="message"></div>
+              )}
+            </p> 
+          </div>
+          <div className="child answerfield">
+            <OtpInput
+              value={captchaAnswer}
+              onChange={handleOtpChange}
+              numInputs={5}
+              renderSeparator={<span> </span>}
+              renderInput={(props) => (
+                <input
+                  {...props}
+                  style={{
+    
+                    margin: "5px",
+                    border:"1px Solid Grey",
+                    textAlign:"center",
+                    borderRadius:"10px",
+                    width: "40px", // Set the width as per your requirement
+                    height: "40px", // Set the height as per your requirement
+                    fontSize: "16px", // Optional: Set the font size
+                  }}
+                />
+              )}
+            />
+             <div className="timer">{formattedTime}</div>
+          </div>
+          
+          <div className="child cancelvalidate">
+          <button
+            className={`btnvalidate ${disableButton ? 'disabled' : ''}`}
+            disabled={disableButton}
+             onClick={verifyCaptcha}
+          >
+              Validate
+            </button>
+          </div>
         </div>
-        <div className="reload-verify">
-            <div onClick={fetchCaptcha}>
-                <ReplayIcon fontSize="large" style={{ transform: 'scaleX(-1)' }}/>
-            </div>
-            <button className="verify"  onClick={verify}>Verify</button>
-        </div>
-    </div>
-</div>
-  );
+      );
+  
 }
+

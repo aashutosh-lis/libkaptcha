@@ -7,6 +7,7 @@ Reference: [How to build a React component library](https://www.airplane.dev/blo
 ## Usage:
 ```js
 import { KaptchaCard } from "@aashutosh-lis/libkaptcha";
+import "@aashutosh-lis/libkaptcha/dist/style.css"  // to import css
 
 function App() {
   return (

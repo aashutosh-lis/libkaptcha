@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "target": "es2016",
+    "lib": [
+      "es2017",
+      "dom",
+      "scripthost"
+  ],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
